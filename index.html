@@ -209,11 +209,62 @@ function Journal({ entries, setEntries }) {
 }
 
 /* ============================================================
-   📊 TRACKER (ПУСТО — ПОКА)
+   📅 TRACKER = CALENDAR
    ============================================================ */
 
 function Tracker() {
-  return <p className="muted">Tracker будет добавлен позже (календарь).</p>;
+  const [data, setData] = React.useState([]);
+  const [error, setError] = React.useState("");
+
+  React.useEffect(() => {
+    loadCalendar()
+      .then(setData)
+      .catch(err => setError(err.message));
+  }, []);
+
+  const byDate = {};
+  data.forEach(d => byDate[d.date] = d);
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  return (
+    <>
+      <h2>Календарь</h2>
+
+      {error && <p className="muted">{error}</p>}
+
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(7, 1fr)",
+        gap: "6px"
+      }}>
+        {[...Array(daysInMonth)].map((_, i) => {
+          const day = i + 1;
+          const date = `${year}-${String(month + 1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+          const entry = byDate[date];
+
+          return (
+            <div
+              key={day}
+              style={{
+                padding: "8px",
+                border: "1px solid #333",
+                background: entry ? "#1e2a1e" : "#111",
+                fontSize: "12px"
+              }}
+            >
+              <strong>{day}</strong><br/>
+              {entry && <span>{entry.technique}</span>}
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
 }
 
 /* ============================================================
