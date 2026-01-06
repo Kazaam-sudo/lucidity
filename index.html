@@ -1,241 +1,274 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <title>Lucidity</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
 
-  <!-- ===== BLOCK: CACHE CONTROL ===== -->
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
+  <!-- ===== PWA / META ===== -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- ===== REACT CDN ===== -->
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
+  <!-- ===== STYLES ===== -->
   <style>
     body {
       margin: 0;
-      padding: 16px;
-      font-family: system-ui, sans-serif;
-      background: #0f0f0f;
-      color: #fff;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0b0b0b;
+      color: #eaeaea;
     }
-    h1 { font-size: 34px; margin-bottom: 12px; }
+    header {
+      padding: 16px;
+      border-bottom: 1px solid #222;
+    }
+    h1 {
+      margin: 0 0 12px 0;
+      font-weight: 600;
+      opacity: 0.85;
+    }
     nav button {
-      margin-right: 6px;
-      padding: 8px 12px;
-      background: transparent;
-      border: 1px solid #222;
-      color: #fff;
+      margin-right: 8px;
+      padding: 6px 10px;
+      background: #111;
+      color: #ccc;
+      border: 1px solid #333;
       cursor: pointer;
     }
-    nav button.primary {
-      background: #ff6b6b;
-      border: none;
-    }
-    input, select, textarea {
-      width: 100%;
-      margin: 6px 0;
-      padding: 8px;
-      background: #111;
-      border: 1px solid #222;
+    nav button.active {
+      background: #222;
       color: #fff;
     }
-    textarea { min-height: 80px; }
-    .card {
-      border: 1px solid #222;
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 16px;
-      background: #141414;
+    nav button.sync {
+      background: #5a2e7a;
+      border-color: #5a2e7a;
+      color: #fff;
     }
-    .muted { color: #9a9a9a; font-size: 13px; }
-    ul { padding-left: 18px; }
+    main {
+      padding: 16px;
+    }
+    input, textarea, select {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 8px;
+      background: #111;
+      color: #eee;
+      border: 1px solid #333;
+    }
+    textarea {
+      min-height: 80px;
+    }
+    .entry {
+      margin-top: 8px;
+      opacity: 0.85;
+      font-size: 14px;
+    }
+    .muted {
+      opacity: 0.6;
+    }
   </style>
 </head>
-<body>
 
+<body>
 <div id="root"></div>
+
+<!-- ===== REACT / BABEL ===== -->
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
 <script type="text/babel">
 
-/* ===== BLOCK: CONFIG ===== */
-const APP_VERSION = "0.4.0";
-const STORAGE = {
-  JOURNAL: "lucidity_journal",
-  RC: "lucidity_rc",
-  RC_TIPS: "lucidity_rc_tips"
-};
-const SHEETS_WEBHOOK_URL = "PASTE_YOUR_WEBHOOK_URL_HERE";
+/* ============================================================
+   🔧 CONFIG
+   ============================================================ */
 
-/* ===== HELP DATA ===== */
-const TECHNIQUES = [
-  ["MILD", "Напоминание себе об осознанности перед сном"],
-  ["WBTB", "Проснуться ночью и снова уснуть осознанно"],
-  ["WILD", "Прямой вход в сон с сохранением сознания"],
-  ["RC", "Reality Check — проверка реальности"]
-];
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxRWUhPm5Clc6iIR8tIwoE6L1J57Y6nlBdhIMUxqlKCk13jRlspF_MFCxoSZB3x0J5Edg/exec";
 
-const DEFAULT_RC_TIPS = [
-  "Посмотри на руки — меняются ли?",
-  "Прочитай текст дважды.",
-  "Зажми нос и попробуй дышать.",
-  "Спроси себя: я сплю?"
-];
+/* ============================================================
+   💾 STORAGE HELPERS
+   ============================================================ */
 
-function read(key, fallback) {
-  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
-  catch { return fallback; }
-}
-function write(key, val) {
-  localStorage.setItem(key, JSON.stringify(val));
-}
-function uid() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2);
-}
+const STORAGE_KEY = "lucidity_journal";
 
-/* ===== GOOGLE SHEETS SYNC (без дублей) ===== */
-async function syncToSheets(entries) {
-  const unsynced = entries.filter(e => !e.synced);
-  if (!unsynced.length) {
-    alert("Нет новых записей");
-    return entries;
+function loadJournal() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  } catch {
+    return [];
   }
-  const res = await fetch(SHEETS_WEBHOOK_URL, {
+}
+
+function saveJournal(entries) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+}
+
+/* ============================================================
+   🔁 SYNC TO GOOGLE SHEETS
+   ============================================================ */
+
+async function syncToGoogle(entries) {
+  const unsynced = entries.filter(e => !e.synced);
+  if (!unsynced.length) return;
+
+  const res = await fetch(SCRIPT_URL, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ entries: unsynced })
   });
-  const json = await res.json();
-  if (!json.ok) throw new Error(json.error || "sync error");
 
-  return entries.map(e => ({ ...e, synced: true }));
+  const text = await res.text();
+
+  if (text.startsWith("<")) {
+    throw new Error("Apps Script вернул HTML (проверь /exec)");
+  }
+
+  const data = JSON.parse(text);
+  if (!data.ok) throw new Error(data.error || "Sync error");
+
+  // помечаем как синхронизированные
+  const updated = entries.map(e => ({ ...e, synced: true }));
+  saveJournal(updated);
+  return updated;
 }
 
-/* ===== APP ===== */
-function App() {
-  const [page, setPage] = React.useState("journal");
-  const [entries, setEntries] = React.useState(read(STORAGE.JOURNAL, []));
-  const [rcTips, setRcTips] = React.useState(read(STORAGE.RC_TIPS, DEFAULT_RC_TIPS));
+/* ============================================================
+   🧠 JOURNAL COMPONENT
+   ============================================================ */
+
+function Journal({ entries, setEntries }) {
+  const [sleepTime, setSleepTime] = React.useState("");
+  const [wakeTime, setWakeTime] = React.useState("");
+  const [technique, setTechnique] = React.useState("");
+  const [note, setNote] = React.useState("");
 
   function saveEntry() {
-    const note = document.getElementById("note").value.trim();
-    if (!note) return;
     const entry = {
-      id: uid(),
-      date: new Date().toLocaleDateString(),
-      technique: document.getElementById("tech").value,
+      date: new Date().toISOString().slice(0,10),
+      sleepTime,
+      wakeTime,
+      technique,
       note,
       synced: false
     };
-    const updated = [...entries, entry];
+
+    const updated = [entry, ...entries].slice(0, 5);
     setEntries(updated);
-    write(STORAGE.JOURNAL, updated);
-    document.getElementById("note").value = "";
+    saveJournal(updated);
+
+    setSleepTime("");
+    setWakeTime("");
+    setTechnique("");
+    setNote("");
   }
+
+  return (
+    <>
+      <input type="time" value={sleepTime} onChange={e => setSleepTime(e.target.value)} />
+      <input type="time" value={wakeTime} onChange={e => setWakeTime(e.target.value)} />
+
+      <select value={technique} onChange={e => setTechnique(e.target.value)}>
+        <option value="">Техника</option>
+        <option value="MILD">MILD</option>
+        <option value="WBTB">WBTB</option>
+        <option value="RC">RC</option>
+        <option value="WILD">WILD</option>
+      </select>
+
+      <textarea
+        placeholder="Сон / ощущения / выводы"
+        value={note}
+        onChange={e => setNote(e.target.value)}
+      />
+
+      <button onClick={saveEntry}>Save</button>
+
+      {entries.map((e, i) => (
+        <div key={i} className="entry">
+          {e.date} · {e.technique || "—"} {e.synced ? "✓" : "•"}
+        </div>
+      ))}
+    </>
+  );
+}
+
+/* ============================================================
+   📊 TRACKER (ПУСТО — ПОКА)
+   ============================================================ */
+
+function Tracker() {
+  return <p className="muted">Tracker будет добавлен позже (календарь).</p>;
+}
+
+/* ============================================================
+   🧭 HELP (ПОКА БАЗА)
+   ============================================================ */
+
+function Help() {
+  return (
+    <pre className="muted">
+ТВОЙ WILD ПРИ ЗАСЫПАНИИ (ГЛУБОКИЙ)
+
+Метод «Тонкий якорь»
+
+— выбери один якорь
+— касайся и отпускай
+— смотри ИЗ образов
+— стабилизация: трение ладоней
+    </pre>
+  );
+}
+
+/* ============================================================
+   ⚙️ SETTINGS
+   ============================================================ */
+
+function Settings() {
+  return <p className="muted">Настройки (позже).</p>;
+}
+
+/* ============================================================
+   🚀 APP ROOT
+   ============================================================ */
+
+function App() {
+  const [page, setPage] = React.useState("journal");
+  const [entries, setEntries] = React.useState(loadJournal());
 
   async function handleSync() {
     try {
-      const updated = await syncToSheets(entries);
-      setEntries(updated);
-      write(STORAGE.JOURNAL, updated);
-      alert("Синк выполнен");
+      const updated = await syncToGoogle(entries);
+      if (updated) setEntries(updated);
+      alert("Синхронизация успешна");
     } catch (e) {
       alert("Ошибка синка: " + e.message);
     }
   }
 
-  function doRC() {
-    const tip = rcTips[Math.floor(Math.random() * rcTips.length)];
-    alert("RC:\n" + tip);
-  }
-
   return (
-    <div>
-      <h1>Lucidity</h1>
+    <>
+      <header>
+        <h1>Lucidity</h1>
+        <nav>
+          <button className={page==="journal"?"active":""} onClick={()=>setPage("journal")}>Journal</button>
+          <button className={page==="tracker"?"active":""} onClick={()=>setPage("tracker")}>Tracker</button>
+          <button className={page==="help"?"active":""} onClick={()=>setPage("help")}>Help</button>
+          <button className={page==="settings"?"active":""} onClick={()=>setPage("settings")}>Settings</button>
+          <button className="sync" onClick={handleSync}>Sync</button>
+          <span className="muted"> v0.4.0</span>
+        </nav>
+      </header>
 
-      <nav>
-        <button onClick={() => setPage("journal")}>Journal</button>
-        <button onClick={() => setPage("tracker")}>Tracker</button>
-        <button onClick={() => setPage("help")}>Help</button>
-        <button onClick={() => setPage("settings")}>Settings</button>
-        <button className="primary" onClick={handleSync}>Sync</button>
-        <span className="muted">v{APP_VERSION}</span>
-      </nav>
-
-      {/* ===== JOURNAL ===== */}
-      {page === "journal" && (
-        <div className="card">
-          <h2>Journal</h2>
-          <select id="tech">
-            <option value="">— техника —</option>
-            {TECHNIQUES.map(t => <option key={t[0]} value={t[0]}>{t[0]}</option>)}
-          </select>
-          <textarea id="note" placeholder="Сон / ощущения / выводы"></textarea>
-          <button onClick={saveEntry}>Save</button>
-
-          <h3 className="muted">Последние записи</h3>
-          <ul>
-            {entries.slice(-5).map(e => (
-              <li key={e.id}>{e.date} · {e.technique} — {e.note}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* ===== TRACKER ===== */}
-      {page === "tracker" && (
-        <div className="card">
-          <h2>Tracker</h2>
-          <p className="muted">Записей всего: {entries.length}</p>
-          <p className="muted">Календарный вид будет подтягиваться из Google Docs.</p>
-        </div>
-      )}
-
-      {/* ===== HELP ===== */}
-      {page === "help" && (
-        <div className="card">
-          <h2>Help</h2>
-
-          <button onClick={doRC}>Quick Reality Check</button>
-
-          <h3>WILD — тонкий якорь</h3>
-          <p className="muted">
-            Выбери один якорь (пульсация / давление / шум).<br/>
-            Не держи и не теряй — касайся и отпускай.<br/>
-            Появились образы — смотри <b>из</b> них, не на них.<br/>
-            Сцена собралась → трение ладоней или команда «Стабилизируюсь».
-          </p>
-
-          <h3>Техники</h3>
-          <ul>
-            {TECHNIQUES.map(t => (
-              <li key={t[0]}><b>{t[0]}</b> — {t[1]}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* ===== SETTINGS ===== */}
-      {page === "settings" && (
-        <div className="card">
-          <h2>Settings</h2>
-          <p className="muted">Подсказки Quick RC (по одной в строке)</p>
-          <textarea
-            defaultValue={rcTips.join("\n")}
-            onBlur={e => {
-              const arr = e.target.value.split("\n").map(s => s.trim()).filter(Boolean);
-              setRcTips(arr);
-              write(STORAGE.RC_TIPS, arr);
-            }}
-          />
-        </div>
-      )}
-    </div>
+      <main>
+        {page==="journal" && <Journal entries={entries} setEntries={setEntries} />}
+        {page==="tracker" && <Tracker />}
+        {page==="help" && <Help />}
+        {page==="settings" && <Settings />}
+      </main>
+    </>
   );
 }
+
+/* ============================================================
+   🔌 MOUNT
+   ============================================================ */
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
