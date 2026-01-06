@@ -5,16 +5,18 @@
   <title>Lucidity</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-<meta http-equiv="Pragma" content="no-cache" />
-<meta http-equiv="Expires" content="0" />
+  <!-- ===== BLOCK: CACHE CONTROL ===== -->
+  <!-- Отключаем кэш HTML, чтобы всегда видеть новую версию -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
 
-
-  <!-- React 18 CDN -->
+  <!-- ===== BLOCK: REACT CDN ===== -->
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+  <!-- ===== BLOCK: STYLES ===== -->
   <style>
     body {
       margin: 0;
@@ -23,7 +25,6 @@
       background: #0f0f0f;
       color: #ffffff;
     }
-    h1 { margin-top: 0; }
     button {
       margin: 4px;
       padding: 8px 12px;
@@ -32,90 +33,148 @@
       border: 1px solid #333;
       cursor: pointer;
     }
-    textarea {
+    input, textarea {
       width: 100%;
-      height: 80px;
-      margin-top: 8px;
+      margin: 6px 0;
+      padding: 8px;
       background: #1a1a1a;
       color: #fff;
       border: 1px solid #333;
-      padding: 8px;
     }
-    ul { padding-left: 16px; }
+    ul { padding-left: 18px; }
     li { margin: 4px 0; }
   </style>
 </head>
-<body>
 
+<body>
 <div id="root"></div>
 
 <script type="text/babel">
 
+// ===================================================
+// =============== BLOCK: APP CONFIG =================
+// ===================================================
+const APP_VERSION = "0.3.0";
+
+// ===================================================
+// =============== BLOCK: STORAGE KEYS ===============
+// ===================================================
+const JOURNAL_KEY = "lucidity_journal";
+const RC_KEY = "lucidity_rc";
+
+// ===================================================
+// =============== BLOCK: RC DATA ====================
+// ===================================================
+const RC_TASKS = [
+  "Посмотри на руки — меняются ли?",
+  "Прочитай любой текст дважды.",
+  "Зажми нос и попробуй дышать.",
+  "Спроси себя: я сейчас сплю?"
+];
+
+// ===================================================
+// =============== BLOCK: MAIN APP ===================
+// ===================================================
 function App() {
   const [page, setPage] = React.useState("journal");
+
+  // ---------- BLOCK: JOURNAL STATE ----------
   const [entries, setEntries] = React.useState(
-    JSON.parse(localStorage.getItem("journal") || "[]")
+    JSON.parse(localStorage.getItem(JOURNAL_KEY) || "[]")
   );
 
-  function addEntry() {
-    const textarea = document.getElementById("note");
-    const text = textarea.value.trim();
-    if (!text) return;
+  // =================================================
+  // =============== BLOCK: JOURNAL LOGIC ============
+  // =================================================
+  function saveJournalEntry() {
+    const entry = {
+      date: new Date().toLocaleDateString(),
+      sleepTime: document.getElementById("sleepTime").value,
+      wakeTime: document.getElementById("wakeTime").value,
+      technique: document.getElementById("technique").value,
+      level: document.getElementById("level").value,
+      note: document.getElementById("note").value.trim()
+    };
 
-    const updated = [
-      ...entries,
-      { text, time: new Date().toLocaleString() }
-    ];
+    if (!entry.note) return;
 
+    const updated = [...entries, entry];
     setEntries(updated);
-    localStorage.setItem("journal", JSON.stringify(updated));
-    textarea.value = "";
+    localStorage.setItem(JOURNAL_KEY, JSON.stringify(updated));
+
+    ["sleepTime","wakeTime","technique","level","note"]
+      .forEach(id => document.getElementById(id).value = "");
   }
 
+  // =================================================
+  // =============== BLOCK: RC LOGIC =================
+  // =================================================
+  function logRC() {
+    const task = RC_TASKS[Math.floor(Math.random() * RC_TASKS.length)];
+    const rc = JSON.parse(localStorage.getItem(RC_KEY) || "[]");
+
+    rc.push({
+      time: new Date().toLocaleString(),
+      task
+    });
+
+    localStorage.setItem(RC_KEY, JSON.stringify(rc));
+    alert("Reality Check:\n" + task);
+  }
+
+  // =================================================
+  // =============== BLOCK: UI =======================
+  // =================================================
   return (
     <div>
       <h1>Lucidity</h1>
 
+      {/* ===== BLOCK: NAVIGATION ===== */}
       <nav>
         <button onClick={() => setPage("journal")}>Journal</button>
         <button onClick={() => setPage("tracker")}>Tracker</button>
-        <button onClick={() => setPage("help")}>Help</button>
+        <button onClick={logRC}>Quick RC</button>
       </nav>
 
+      {/* ===== BLOCK: JOURNAL UI ===== */}
       {page === "journal" && (
         <div>
           <h2>Journal</h2>
-          <textarea id="note" placeholder="Что снилось / техника / мысли" />
-          <button onClick={addEntry}>Save</button>
+
+          <input id="sleepTime" placeholder="Лёг спать (23:30)" />
+          <input id="wakeTime" placeholder="Проснулся (06:40)" />
+          <input id="technique" placeholder="Техника (MILD / WBTB / RC)" />
+          <input id="level" type="number" min="0" max="5" placeholder="Осознанность 0–5" />
+          <textarea id="note" placeholder="Сон / ощущения / выводы" />
+
+          <button onClick={saveJournalEntry}>Save</button>
 
           <ul>
             {entries.map((e, i) => (
-              <li key={i}>{e.time} — {e.text}</li>
+              <li key={i}>
+                {e.date} · L{e.level} · {e.technique} — {e.note}
+              </li>
             ))}
           </ul>
+
+          <small style={{opacity:0.4}}>v{APP_VERSION}</small>
         </div>
       )}
 
+      {/* ===== BLOCK: TRACKER UI ===== */}
       {page === "tracker" && (
         <div>
           <h2>Tracker</h2>
           <p>Всего записей: {entries.length}</p>
         </div>
       )}
-
-      {page === "help" && (
-        <div>
-          <h2>Help</h2>
-          <p>
-            Осознанность начинается с вопроса:<br/>
-            <strong>«Я сейчас сплю или нет?»</strong>
-          </p>
-        </div>
-      )}
     </div>
   );
 }
 
+// ===================================================
+// =============== BLOCK: RENDER =====================
+// ===================================================
 ReactDOM
   .createRoot(document.getElementById("root"))
   .render(<App />);
