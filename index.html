@@ -1,219 +1,472 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <title>Lucidity</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
 
-  <!-- ===== BLOCK: CACHE CONTROL ===== -->
-  <!-- Отключаем кэш HTML, чтобы всегда видеть новую версию -->
+  <!-- ====================== BLOCK: CACHE CONTROL ====================== -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
-  <!-- ===== BLOCK: REACT CDN ===== -->
+  <!-- ====================== BLOCK: FAVICON (inline SVG) ====================== -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23121812'/%3E%3Cpath d='M16 32h32' stroke='%23ff6b6b' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='20' r='6' fill='%23ffd166'/%3E%3C/svg%3E" />
+
+  <!-- ====================== BLOCK: REACT CDN ====================== -->
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- ===== BLOCK: STYLES ===== -->
+  <!-- ====================== BLOCK: STYLES ====================== -->
   <style>
-    body {
-      margin: 0;
-      padding: 16px;
-      font-family: system-ui, sans-serif;
-      background: #0f0f0f;
-      color: #ffffff;
+    :root {
+      --bg: #0f0f0f;
+      --panel: #141414;
+      --muted: #9a9a9a;
+      --accent: #ff6b6b;
+      --ok: #4cd964;
+      --text: #fff;
     }
-    button {
-      margin: 4px;
-      padding: 8px 12px;
-      background: #1f1f1f;
-      color: #fff;
-      border: 1px solid #333;
-      cursor: pointer;
+    html,body{height:100%}
+    body{
+      margin:0;
+      padding:18px;
+      font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background:var(--bg);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
     }
-    input, textarea {
-      width: 100%;
-      margin: 6px 0;
-      padding: 8px;
-      background: #1a1a1a;
-      color: #fff;
-      border: 1px solid #333;
-    }
-    ul { padding-left: 18px; }
-    li { margin: 4px 0; }
+    h1{margin:0 0 12px;font-size:34px}
+    h2{margin:8px 0}
+    nav{margin:12px 0}
+    button{background:transparent;border:1px solid #222;color:var(--text);padding:8px 12px;margin-right:6px;border-radius:6px;cursor:pointer}
+    button.primary{background:var(--accent);border-color:transparent}
+    .grid{display:grid;gap:12px;grid-template-columns:1fr 320px}
+    .card{background:var(--panel);padding:12px;border-radius:8px;border:1px solid #151515}
+    input,select,textarea{display:block;width:100%;box-sizing:border-box;padding:10px;border-radius:6px;background:#0b0b0b;border:1px solid #222;color:var(--text)}
+    textarea{min-height:80px;resize:vertical}
+    ul{padding-left:20px}
+    .muted{color:var(--muted)}
+    .small{font-size:13px;color:var(--muted)}
+    .synced{color:var(--ok)}
+    .entry-row{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed #111}
+    .entry-meta{min-width:220px;font-size:13px;color:var(--muted)}
+    .entry-note{flex:1}
+    .status-badge{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid #222}
+    .level{font-weight:600;color:var(--accent);margin-right:6px}
+    .footer{margin-top:18px;opacity:0.6;font-size:13px}
+    .rc-list{max-height:160px;overflow:auto;padding:8px;border-radius:6px;border:1px solid #222}
+    .settings-block{margin-top:12px}
+    .icon{width:18px;height:18px;display:inline-block;vertical-align:middle;margin-right:6px}
+    @media(max-width:880px){ .grid{grid-template-columns:1fr} }
   </style>
 </head>
-
 <body>
+
 <div id="root"></div>
 
 <script type="text/babel">
 
-// ===================================================
-// =============== BLOCK: APP CONFIG =================
-// ===================================================
-const APP_VERSION = "0.3.0";
+/* ===========================================================
+   BLOCK: APP CONFIG
+   - Поиск: "BLOCK: APP CONFIG"
+   =========================================================== */
+const APP_VERSION = "0.3.1";
+const STORAGE = {
+  JOURNAL: "lucidity_journal",
+  RC: "lucidity_rc",
+  RC_TIPS: "lucidity_rc_tips"
+};
+
+// Вставь сюда URL вебхука Google Apps Script (с /exec в конце)
 const SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxRWUhPm5Clc6iIR8tIwoE6L1J57Y6nlBdhIMUxqlKCk13jRlspF_MFCxoSZB3x0J5Edg/exec";
 
-
-// ===================================================
-// =============== BLOCK: STORAGE KEYS ===============
-// ===================================================
-const JOURNAL_KEY = "lucidity_journal";
-const RC_KEY = "lucidity_rc";
-
-// ===================================================
-// =============== BLOCK: RC DATA ====================
-// ===================================================
-const RC_TASKS = [
+/* ===========================================================
+   BLOCK: HELP DATA / DEFAULTS
+   =========================================================== */
+const DEFAULT_RC_TIPS = [
   "Посмотри на руки — меняются ли?",
-  "Прочитай любой текст дважды.",
+  "Прочитай текст дважды.",
   "Зажми нос и попробуй дышать.",
-  "Спроси себя: я сейчас сплю?"
+  "Спроси себя: «Я сейчас сплю?»"
 ];
 
-// ===================================================
-// =============== BLOCK: MAIN APP ===================
-// ===================================================
-function App() {
-  const [page, setPage] = React.useState("journal");
+const TECHNIQUES = [
+  { id: "MILD", label: "MILD", desc: "Mnemonic Induction of Lucid Dreams — напомнить себе, что будешь осознанным перед сном." },
+  { id: "WBTB", label: "WBTB", desc: "Wake Back To Bed — проснуться посреди ночи, затем вернуться к сну." },
+  { id: "WILD", label: "WILD", desc: "Wake Initiated Lucid Dream — переход в сон, сохраняя сознание." },
+  { id: "RC", label: "Reality Check (RC)", desc: "Короткий тест реальности: нос, текст/часы, пальцы." },
+  { id: "SSILD", label: "SSILD", desc: "Senses Induced Lucid Dream — концентрация на ощущениях во сне." }
+];
 
-  // ---------- BLOCK: JOURNAL STATE ----------
-  const [entries, setEntries] = React.useState(
-    JSON.parse(localStorage.getItem(JOURNAL_KEY) || "[]")
-  );
+/* ===========================================================
+   BLOCK: HELPERS
+   =========================================================== */
 
-  // =================================================
-  // =============== BLOCK: JOURNAL LOGIC ============
-  // =================================================
-  function saveJournalEntry() {
-    const entry = {
-      date: new Date().toLocaleDateString(),
-      sleepTime: document.getElementById("sleepTime").value,
-      wakeTime: document.getElementById("wakeTime").value,
-      technique: document.getElementById("technique").value,
-      level: document.getElementById("level").value,
-      note: document.getElementById("note").value.trim()
-    };
+function timesOptions(stepMinutes = 15) {
+  const out = [];
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += stepMinutes) {
+      const hh = String(h).padStart(2, "0");
+      const mm = String(m).padStart(2, "0");
+      out.push(`${hh}:${mm}`);
+    }
+  }
+  return out;
+}
 
-    if (!entry.note) return;
+function readJSON(key, fallback) {
+  try { const v = JSON.parse(localStorage.getItem(key)); return v ?? fallback; } catch (e) { return fallback; }
+}
+function writeJSON(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
 
-    const updated = [...entries, entry];
-    setEntries(updated);
-    localStorage.setItem(JOURNAL_KEY, JSON.stringify(updated));
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 
-    ["sleepTime","wakeTime","technique","level","note"]
-      .forEach(id => document.getElementById(id).value = "");
+/* ===========================================================
+   BLOCK: STREAK COMPUTE
+   - вычисляет текущую серию подряд дней с записями (по датам)
+   =========================================================== */
+function computeStreak(entries) {
+  if (!entries || !entries.length) return 0;
+  const dates = Array.from(new Set(entries.map(e => e.date))).sort((a,b)=> new Date(b) - new Date(a));
+  let streak = 0;
+  let prev = null;
+  for (let i = 0; i < dates.length; i++) {
+    const d = new Date(dates[i]);
+    d.setHours(0,0,0,0);
+    if (i === 0) {
+      // if today is not the date of the latest entry, streak may still count from last entry
+      prev = d;
+      streak = 1;
+    } else {
+      const diffDays = Math.round((prev - d) / (1000*60*60*24));
+      if (diffDays === 1) {
+        streak++;
+        prev = d;
+      } else break;
+    }
+  }
+  return streak;
+}
+
+/* ===========================================================
+   BLOCK: GOOGLE SHEETS SYNC
+   - отправляет только unsynced entries
+   - помечает помеченные после успешного синка
+   =========================================================== */
+async function syncToSheets(entries, onProgress = null) {
+  if (!SHEETS_WEBHOOK_URL || SHEETS_WEBHOOK_URL.includes("PASTE_YOUR")) {
+    alert("Sheets webhook не настроен. Вставь URL в код (BLOCK: APP CONFIG).");
+    return { ok:false, error: "no webhook" };
   }
 
-  // =======================================
-  // BLOCK: GOOGLE SHEETS SYNC
-  // =======================================
-async function syncToSheets() {
-  if (!SHEETS_WEBHOOK_URL) {
-    alert("Sheets webhook not configured");
-    return;
-  }
-
-  if (entries.length === 0) {
-    alert("Нет записей для синка");
-    return;
+  const unsynced = entries.filter(e => !e.synced);
+  if (unsynced.length === 0) {
+    alert("Нет новых записей для синка.");
+    return { ok: true, message: "nothing" };
   }
 
   try {
+    // IMPORTANT: без заголовков, чтобы избежать preflight (CORS)
     const res = await fetch(SHEETS_WEBHOOK_URL, {
-  method: "POST",
-  body: JSON.stringify({ entries }) // ВАЖНО: без headers
-});
+      method: "POST",
+      body: JSON.stringify({ entries: unsynced })
+    });
 
-    const result = await res.json();
+    const json = await res.json();
 
-    if (result.ok) {
-      alert("Синхронизировано с Google Sheets ✅");
+    if (json && json.ok) {
+      // помечаем локально как синкнутые
+      const updated = entries.map(e => e.synced ? e : ({ ...e, synced: true }));
+      writeJSON(STORAGE.JOURNAL, updated);
+      return { ok: true, synced: unsynced.length };
     } else {
-      alert("Ошибка синка: " + result.error);
+      return { ok: false, error: json?.error || "unknown" };
     }
   } catch (err) {
-    alert("Ошибка сети: " + err.message);
+    return { ok:false, error: err.message || String(err) };
   }
 }
 
+/* ===========================================================
+   BLOCK: APP (React)
+   =========================================================== */
+function App() {
+  const [page, setPage] = React.useState("journal");
+  const [entries, setEntries] = React.useState(readJSON(STORAGE.JOURNAL, []));
+  const [rcLog, setRcLog] = React.useState(readJSON(STORAGE.RC, []));
+  const [rcTips, setRcTips] = React.useState(readJSON(STORAGE.RC_TIPS, DEFAULT_RC_TIPS));
 
-  // =================================================
-  // =============== BLOCK: RC LOGIC =================
-  // =================================================
-  function logRC() {
-    const task = RC_TASKS[Math.floor(Math.random() * RC_TASKS.length)];
-    const rc = JSON.parse(localStorage.getItem(RC_KEY) || "[]");
-
-    rc.push({
-      time: new Date().toLocaleString(),
-      task
-    });
-
-    localStorage.setItem(RC_KEY, JSON.stringify(rc));
-    alert("Reality Check:\n" + task);
+  // Helpers to reload from storage after external writes
+  function reloadEntries() {
+    const e = readJSON(STORAGE.JOURNAL, []);
+    setEntries(e);
   }
 
-  // =================================================
-  // =============== BLOCK: UI =======================
-  // =================================================
+  /* =========================
+     BLOCK: SAVE ENTRY
+     - создаёт структуру и сохраняет
+     ========================= */
+  function saveJournalEntry() {
+    const sleepTime = document.getElementById("sleepTime").value;
+    const wakeTime = document.getElementById("wakeTime").value;
+    const technique = document.getElementById("technique").value;
+    const level = Number(document.getElementById("level").value || 0);
+    const note = document.getElementById("note").value.trim();
+
+    if (!note) { alert("Заполните заметку о сне."); return; }
+
+    const entry = {
+      id: uid(),
+      date: new Date().toLocaleDateString(),
+      sleepTime,
+      wakeTime,
+      technique,
+      level: Math.max(0, Math.min(5, isNaN(level) ? 0 : level)),
+      note,
+      synced: false
+    };
+
+    const updated = [...entries, entry];
+    setEntries(updated);
+    writeJSON(STORAGE.JOURNAL, updated);
+
+    // очистка формы
+    ["sleepTime","wakeTime","technique","level","note"].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = "";
+    });
+  }
+
+  /* =========================
+     BLOCK: QUICK RC
+     - лог RC и сохранение
+     ========================= */
+  function logRC() {
+    const task = rcTips[Math.floor(Math.random() * rcTips.length)];
+    const rec = { id: uid(), time: new Date().toLocaleString(), task };
+    const updated = [...rcLog, rec];
+    setRcLog(updated);
+    writeJSON(STORAGE.RC, updated);
+    alert("RC: " + task);
+  }
+
+  /* =========================
+     BLOCK: SYNC BUTTON HANDLER
+     ========================= */
+  async function handleSync() {
+    const res = await syncToSheets(entries);
+    if (res.ok) {
+      if (res.synced && res.synced > 0) {
+        alert("Синхронизировано: " + res.synced + " запись(ей)");
+        reloadEntries();
+      } else {
+        alert("Новых записей не было.");
+      }
+    } else {
+      alert("Ошибка синка: " + (res.error || "unknown"));
+    }
+  }
+
+  /* =========================
+     BLOCK: UI RENDER
+     ========================= */
+  // last 5 for journal preview
+  const lastFive = [...entries].slice(-5);
+
+  const totalLucid = entries.filter(e => e.level > 0).length;
+  const strongLucid = entries.filter(e => e.level >= 3).length;
+  const streak = computeStreak(entries);
+
   return (
     <div>
       <h1>Lucidity</h1>
 
-      {/* ===== BLOCK: NAVIGATION ===== */}
+      {/* BLOCK: NAV */}
       <nav>
         <button onClick={() => setPage("journal")}>Journal</button>
         <button onClick={() => setPage("tracker")}>Tracker</button>
-        <button onClick={logRC}>Quick RC</button>
-        <button onClick={syncToSheets}>Sync</button>
+        <button onClick={() => setPage("quickrc")}>Quick RC</button>
+        <button onClick={handleSync} className="primary">Sync</button>
+        <span style={{marginLeft:10}} className="small muted">v{APP_VERSION}</span>
       </nav>
 
-      {/* ===== BLOCK: JOURNAL UI ===== */}
-      {page === "journal" && (
+      <div className="grid">
         <div>
-          <h2>Journal</h2>
 
-          <input id="sleepTime" placeholder="Лёг спать (23:30)" />
-          <input id="wakeTime" placeholder="Проснулся (06:40)" />
-          <input id="technique" placeholder="Техника (MILD / WBTB / RC)" />
-          <input id="level" type="number" min="0" max="5" placeholder="Осознанность 0–5" />
-          <textarea id="note" placeholder="Сон / ощущения / выводы" />
+          {/* ===== BLOCK: JOURNAL UI ===== */}
+          {page === "journal" && (
+            <div className="card">
+              <h2>Journal</h2>
 
-          <button onClick={saveJournalEntry}>Save</button>
+              {/* Sleep / Wake selects */}
+              <label className="small muted">Лёг спать</label>
+              <select id="sleepTime" defaultValue="">
+                <option value="">— выбрать —</option>
+                {timesOptions(15).map(t => <option key={"s"+t} value={t}>{t}</option>)}
+              </select>
 
-          <ul>
-            {entries.map((e, i) => (
-              <li key={i}>
-                {e.date} · L{e.level} · {e.technique} — {e.note}
-              </li>
-            ))}
-          </ul>
+              <label className="small muted">Проснулся</label>
+              <select id="wakeTime" defaultValue="">
+                <option value="">— выбрать —</option>
+                {timesOptions(15).map(t => <option key={"w"+t} value={t}>{t}</option>)}
+              </select>
 
-          <small style={{opacity:0.4}}>v{APP_VERSION}</small>
+              <label className="small muted">Техника</label>
+              <select id="technique" defaultValue="">
+                <option value="">— выбрать —</option>
+                {TECHNIQUES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+              </select>
+              <div className="small muted" style={{marginTop:6}}>
+                <strong>Подсказка:</strong> выберите технику. Нажмите <em>Tracker → Help</em> для расшифровки всех техник.
+              </div>
+
+              <label className="small muted" style={{marginTop:8}}>Осознанность (0–5)</label>
+              <input id="level" type="range" min="0" max="5" defaultValue="0" onChange={(e)=> {
+                const v = document.getElementById("level").value;
+                const lab = document.getElementById("levelLabel");
+                if (lab) lab.textContent = " " + v;
+              }} />
+              <div id="levelLabel" className="small muted"> 0</div>
+
+              <label className="small muted" style={{marginTop:8}}>Заметка</label>
+              <textarea id="note" placeholder="Сон / ощущения / выводы"></textarea>
+
+              <div style={{marginTop:10}}>
+                <button onClick={saveJournalEntry}>Save</button>
+              </div>
+
+              <div style={{marginTop:12}}>
+                <h3 className="small muted">Последние записи</h3>
+                <div>
+                  {lastFive.length === 0 && <div className="small muted">Нет записей</div>}
+                  <ul>
+                    {lastFive.map((e,i) => (
+                      <li key={e.id}>
+                        <span className="entry-meta">{e.date} · <span className="level">L{e.level}</span> · {e.technique || '—'}</span>
+                        <span>{e.note}</span>
+                        <span style={{marginLeft:8}} className={e.synced ? "synced small" : "small muted"}>
+                          {e.synced ? "synced ✅" : "not synced"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===== BLOCK: QUICK RC UI ===== */}
+          {page === "quickrc" && (
+            <div className="card">
+              <h2>Quick RC</h2>
+              <div style={{marginBottom:8}}>
+                <button onClick={logRC}>Do RC</button>
+              </div>
+
+              <div style={{marginTop:8}}>
+                <h3 className="small muted">Подсказки RC</h3>
+                <div className="rc-list">
+                  {rcTips.map((t, idx) => <div key={idx} style={{padding:6,borderBottom:"1px solid #0b0b0b"}}>{t}</div>)}
+                  {rcTips.length===0 && <div className="small muted">Подсказки не заданы</div>}
+                </div>
+              </div>
+
+              <div style={{marginTop:10}}>
+                <h3 className="small muted">История RC</h3>
+                <div style={{maxHeight:160,overflow:"auto"}}>
+                  {rcLog.length === 0 && <div className="small muted">Нет записей RC</div>}
+                  <ul>
+                    {rcLog.slice().reverse().map(r => (
+                      <li key={r.id} className="small muted">{r.time} — {r.task}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+            </div>
+          )}
+
         </div>
-      )}
 
-      {/* ===== BLOCK: TRACKER UI ===== */}
-      {page === "tracker" && (
         <div>
-          <h2>Tracker</h2>
-          <p>Всего записей: {entries.length}</p>
+          {/* ===== BLOCK: TRACKER / HELP PANEL ===== */}
+          <div className="card">
+            <h2>Tracker</h2>
+            <div className="small muted">Всего записей: <strong>{entries.length}</strong></div>
+            <div className="small muted">Люцидных (level &gt; 0): <strong>{totalLucid}</strong></div>
+            <div className="small muted">Сильных (level ≥ 3): <strong>{strongLucid}</strong></div>
+            <div className="small muted">Текущая серия дней: <strong>{streak}</strong></div>
+
+            <div style={{marginTop:12}}>
+              <h3 className="small muted">Полный журнал</h3>
+              <div style={{maxHeight:260,overflow:"auto"}}>
+                {entries.length === 0 && <div className="small muted">Нет записей</div>}
+                {entries.slice().reverse().map(e => (
+                  <div key={e.id} className="entry-row">
+                    <div className="entry-meta">{e.date} · {e.sleepTime || '—'}→{e.wakeTime || '—'}</div>
+                    <div className="entry-note">{e.note}</div>
+                    <div style={{minWidth:80,textAlign:"right"}}>
+                      <div className="small muted">{e.technique || '—'}</div>
+                      <div><span className="level">L{e.level}</span></div>
+                      <div style={{marginTop:6}}>
+                        {e.synced ? <span className="status-badge synced">Synced</span> : <span className="status-badge">Local</span>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="settings-block">
+              <h3 className="small muted">Help: техники</h3>
+              <div className="small muted">
+                {TECHNIQUES.map(t => (
+                  <div key={t.id} style={{marginBottom:6}}>
+                    <strong>{t.label}</strong> — {t.desc}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+
+          {/* ===== BLOCK: SETTINGS (edit RC tips) ===== */}
+          <div className="card" style={{marginTop:12}}>
+            <h3>Settings</h3>
+
+            <div className="small muted">Редактируем подсказки Quick RC (каждая с новой строки)</div>
+            <div style={{marginTop:8}}>
+              <textarea id="rcTipsArea" placeholder="Одна подсказка в строке" defaultValue={rcTips.join("\n")}></textarea>
+              <div style={{marginTop:8}}>
+                <button onClick={()=>{
+                  const val = document.getElementById("rcTipsArea").value;
+                  const arr = val.split("\n").map(s=>s.trim()).filter(Boolean);
+                  setRcTips(arr);
+                  writeJSON(STORAGE.RC_TIPS, arr);
+                  alert("Сохранено");
+                }}>Save tips</button>
+              </div>
+            </div>
+
+            <div style={{marginTop:12}}>
+              <div className="small muted">Webhook (для Sheets) — подправляется в коде (BLOCK: APP CONFIG)</div>
+            </div>
+
+          </div>
+
         </div>
-      )}
+      </div>
+
+      <div className="footer">Подсказки, RC, синхронизация. Если хочешь убрать ползунок уровня — скажи, уберу. Для иконки приложения можно заменить SVG в BLOCK: FAVICON.</div>
     </div>
   );
 }
 
-// ===================================================
-// =============== BLOCK: RENDER =====================
-// ===================================================
-ReactDOM
-  .createRoot(document.getElementById("root"))
-  .render(<App />);
+/* ===========================================================
+   BLOCK: RENDER
+   =========================================================== */
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
 </script>
 </body>
