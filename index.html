@@ -69,7 +69,7 @@ const STORAGE = {
   RC: "lucidity_rc",
   RC_TIPS: "lucidity_rc_tips"
 };
-const SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxRWUhPm5Clc6iIR8tIwoE6L1J57Y6nlBdhIMUxqlKCk13jRlspF_MFCxoSZB3x0J5Edg/exec";
+const SHEETS_WEBHOOK_URL = "PASTE_YOUR_WEBHOOK_URL_HERE";
 
 /* ===== HELP DATA ===== */
 const TECHNIQUES = [
@@ -140,4 +140,105 @@ function App() {
     try {
       const updated = await syncToSheets(entries);
       setEntries(updated);
-      writ
+      write(STORAGE.JOURNAL, updated);
+      alert("Синк выполнен");
+    } catch (e) {
+      alert("Ошибка синка: " + e.message);
+    }
+  }
+
+  function doRC() {
+    const tip = rcTips[Math.floor(Math.random() * rcTips.length)];
+    alert("RC:\n" + tip);
+  }
+
+  return (
+    <div>
+      <h1>Lucidity</h1>
+
+      <nav>
+        <button onClick={() => setPage("journal")}>Journal</button>
+        <button onClick={() => setPage("tracker")}>Tracker</button>
+        <button onClick={() => setPage("help")}>Help</button>
+        <button onClick={() => setPage("settings")}>Settings</button>
+        <button className="primary" onClick={handleSync}>Sync</button>
+        <span className="muted">v{APP_VERSION}</span>
+      </nav>
+
+      {/* ===== JOURNAL ===== */}
+      {page === "journal" && (
+        <div className="card">
+          <h2>Journal</h2>
+          <select id="tech">
+            <option value="">— техника —</option>
+            {TECHNIQUES.map(t => <option key={t[0]} value={t[0]}>{t[0]}</option>)}
+          </select>
+          <textarea id="note" placeholder="Сон / ощущения / выводы"></textarea>
+          <button onClick={saveEntry}>Save</button>
+
+          <h3 className="muted">Последние записи</h3>
+          <ul>
+            {entries.slice(-5).map(e => (
+              <li key={e.id}>{e.date} · {e.technique} — {e.note}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* ===== TRACKER ===== */}
+      {page === "tracker" && (
+        <div className="card">
+          <h2>Tracker</h2>
+          <p className="muted">Записей всего: {entries.length}</p>
+          <p className="muted">Календарный вид будет подтягиваться из Google Docs.</p>
+        </div>
+      )}
+
+      {/* ===== HELP ===== */}
+      {page === "help" && (
+        <div className="card">
+          <h2>Help</h2>
+
+          <button onClick={doRC}>Quick Reality Check</button>
+
+          <h3>WILD — тонкий якорь</h3>
+          <p className="muted">
+            Выбери один якорь (пульсация / давление / шум).<br/>
+            Не держи и не теряй — касайся и отпускай.<br/>
+            Появились образы — смотри <b>из</b> них, не на них.<br/>
+            Сцена собралась → трение ладоней или команда «Стабилизируюсь».
+          </p>
+
+          <h3>Техники</h3>
+          <ul>
+            {TECHNIQUES.map(t => (
+              <li key={t[0]}><b>{t[0]}</b> — {t[1]}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* ===== SETTINGS ===== */}
+      {page === "settings" && (
+        <div className="card">
+          <h2>Settings</h2>
+          <p className="muted">Подсказки Quick RC (по одной в строке)</p>
+          <textarea
+            defaultValue={rcTips.join("\n")}
+            onBlur={e => {
+              const arr = e.target.value.split("\n").map(s => s.trim()).filter(Boolean);
+              setRcTips(arr);
+              write(STORAGE.RC_TIPS, arr);
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+
+</script>
+</body>
+</html>
