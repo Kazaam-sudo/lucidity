@@ -130,6 +130,25 @@ async function syncToGoogle(entries) {
 }
 
 /* ============================================================
+   📅 LOAD CALENDAR DATA
+   ============================================================ */
+
+async function loadCalendar() {
+  const res = await fetch(SCRIPT_URL);
+  const text = await res.text();
+
+  if (text.startsWith("<")) {
+    throw new Error("HTML вместо JSON (doGet не работает)");
+  }
+
+  const json = JSON.parse(text);
+  if (!json.ok) throw new Error(json.error);
+
+  return json.data;
+}
+
+  
+/* ============================================================
    🧠 JOURNAL COMPONENT
    ============================================================ */
 
