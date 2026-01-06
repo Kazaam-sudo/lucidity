@@ -5,61 +5,55 @@
   <title>Lucidity</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
 
-  <!-- ====================== BLOCK: CACHE CONTROL ====================== -->
+  <!-- ===== BLOCK: CACHE CONTROL ===== -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
-  <!-- ====================== BLOCK: FAVICON (inline SVG) ====================== -->
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23121812'/%3E%3Cpath d='M16 32h32' stroke='%23ff6b6b' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='20' r='6' fill='%23ffd166'/%3E%3C/svg%3E" />
-
-  <!-- ====================== BLOCK: REACT CDN ====================== -->
-  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <!-- ===== REACT CDN ===== -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- ====================== BLOCK: STYLES ====================== -->
   <style>
-    :root {
-      --bg: #0f0f0f;
-      --panel: #141414;
-      --muted: #9a9a9a;
-      --accent: #ff6b6b;
-      --ok: #4cd964;
-      --text: #fff;
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: system-ui, sans-serif;
+      background: #0f0f0f;
+      color: #fff;
     }
-    html,body{height:100%}
-    body{
-      margin:0;
-      padding:18px;
-      font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      background:var(--bg);
-      color:var(--text);
-      -webkit-font-smoothing:antialiased;
+    h1 { font-size: 34px; margin-bottom: 12px; }
+    nav button {
+      margin-right: 6px;
+      padding: 8px 12px;
+      background: transparent;
+      border: 1px solid #222;
+      color: #fff;
+      cursor: pointer;
     }
-    h1{margin:0 0 12px;font-size:34px}
-    h2{margin:8px 0}
-    nav{margin:12px 0}
-    button{background:transparent;border:1px solid #222;color:var(--text);padding:8px 12px;margin-right:6px;border-radius:6px;cursor:pointer}
-    button.primary{background:var(--accent);border-color:transparent}
-    .grid{display:grid;gap:12px;grid-template-columns:1fr 320px}
-    .card{background:var(--panel);padding:12px;border-radius:8px;border:1px solid #151515}
-    input,select,textarea{display:block;width:100%;box-sizing:border-box;padding:10px;border-radius:6px;background:#0b0b0b;border:1px solid #222;color:var(--text)}
-    textarea{min-height:80px;resize:vertical}
-    ul{padding-left:20px}
-    .muted{color:var(--muted)}
-    .small{font-size:13px;color:var(--muted)}
-    .synced{color:var(--ok)}
-    .entry-row{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed #111}
-    .entry-meta{min-width:220px;font-size:13px;color:var(--muted)}
-    .entry-note{flex:1}
-    .status-badge{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid #222}
-    .level{font-weight:600;color:var(--accent);margin-right:6px}
-    .footer{margin-top:18px;opacity:0.6;font-size:13px}
-    .rc-list{max-height:160px;overflow:auto;padding:8px;border-radius:6px;border:1px solid #222}
-    .settings-block{margin-top:12px}
-    .icon{width:18px;height:18px;display:inline-block;vertical-align:middle;margin-right:6px}
-    @media(max-width:880px){ .grid{grid-template-columns:1fr} }
+    nav button.primary {
+      background: #ff6b6b;
+      border: none;
+    }
+    input, select, textarea {
+      width: 100%;
+      margin: 6px 0;
+      padding: 8px;
+      background: #111;
+      border: 1px solid #222;
+      color: #fff;
+    }
+    textarea { min-height: 80px; }
+    .card {
+      border: 1px solid #222;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+      background: #141414;
+    }
+    .muted { color: #9a9a9a; font-size: 13px; }
+    ul { padding-left: 18px; }
   </style>
 </head>
 <body>
@@ -68,406 +62,82 @@
 
 <script type="text/babel">
 
-/* ===========================================================
-   BLOCK: APP CONFIG
-   - Поиск: "BLOCK: APP CONFIG"
-   =========================================================== */
-const APP_VERSION = "0.3.1";
+/* ===== BLOCK: CONFIG ===== */
+const APP_VERSION = "0.4.0";
 const STORAGE = {
   JOURNAL: "lucidity_journal",
   RC: "lucidity_rc",
   RC_TIPS: "lucidity_rc_tips"
 };
-
-// Вставь сюда URL вебхука Google Apps Script (с /exec в конце)
 const SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxRWUhPm5Clc6iIR8tIwoE6L1J57Y6nlBdhIMUxqlKCk13jRlspF_MFCxoSZB3x0J5Edg/exec";
 
-/* ===========================================================
-   BLOCK: HELP DATA / DEFAULTS
-   =========================================================== */
+/* ===== HELP DATA ===== */
+const TECHNIQUES = [
+  ["MILD", "Напоминание себе об осознанности перед сном"],
+  ["WBTB", "Проснуться ночью и снова уснуть осознанно"],
+  ["WILD", "Прямой вход в сон с сохранением сознания"],
+  ["RC", "Reality Check — проверка реальности"]
+];
+
 const DEFAULT_RC_TIPS = [
   "Посмотри на руки — меняются ли?",
   "Прочитай текст дважды.",
   "Зажми нос и попробуй дышать.",
-  "Спроси себя: «Я сейчас сплю?»"
+  "Спроси себя: я сплю?"
 ];
 
-const TECHNIQUES = [
-  { id: "MILD", label: "MILD", desc: "Mnemonic Induction of Lucid Dreams — напомнить себе, что будешь осознанным перед сном." },
-  { id: "WBTB", label: "WBTB", desc: "Wake Back To Bed — проснуться посреди ночи, затем вернуться к сну." },
-  { id: "WILD", label: "WILD", desc: "Wake Initiated Lucid Dream — переход в сон, сохраняя сознание." },
-  { id: "RC", label: "Reality Check (RC)", desc: "Короткий тест реальности: нос, текст/часы, пальцы." },
-  { id: "SSILD", label: "SSILD", desc: "Senses Induced Lucid Dream — концентрация на ощущениях во сне." }
-];
-
-/* ===========================================================
-   BLOCK: HELPERS
-   =========================================================== */
-
-function timesOptions(stepMinutes = 15) {
-  const out = [];
-  for (let h = 0; h < 24; h++) {
-    for (let m = 0; m < 60; m += stepMinutes) {
-      const hh = String(h).padStart(2, "0");
-      const mm = String(m).padStart(2, "0");
-      out.push(`${hh}:${mm}`);
-    }
-  }
-  return out;
+function read(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+  catch { return fallback; }
+}
+function write(key, val) {
+  localStorage.setItem(key, JSON.stringify(val));
+}
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
-function readJSON(key, fallback) {
-  try { const v = JSON.parse(localStorage.getItem(key)); return v ?? fallback; } catch (e) { return fallback; }
-}
-function writeJSON(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
-
-function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
-
-/* ===========================================================
-   BLOCK: STREAK COMPUTE
-   - вычисляет текущую серию подряд дней с записями (по датам)
-   =========================================================== */
-function computeStreak(entries) {
-  if (!entries || !entries.length) return 0;
-  const dates = Array.from(new Set(entries.map(e => e.date))).sort((a,b)=> new Date(b) - new Date(a));
-  let streak = 0;
-  let prev = null;
-  for (let i = 0; i < dates.length; i++) {
-    const d = new Date(dates[i]);
-    d.setHours(0,0,0,0);
-    if (i === 0) {
-      // if today is not the date of the latest entry, streak may still count from last entry
-      prev = d;
-      streak = 1;
-    } else {
-      const diffDays = Math.round((prev - d) / (1000*60*60*24));
-      if (diffDays === 1) {
-        streak++;
-        prev = d;
-      } else break;
-    }
-  }
-  return streak;
-}
-
-/* ===========================================================
-   BLOCK: GOOGLE SHEETS SYNC
-   - отправляет только unsynced entries
-   - помечает помеченные после успешного синка
-   =========================================================== */
-async function syncToSheets(entries, onProgress = null) {
-  if (!SHEETS_WEBHOOK_URL || SHEETS_WEBHOOK_URL.includes("PASTE_YOUR")) {
-    alert("Sheets webhook не настроен. Вставь URL в код (BLOCK: APP CONFIG).");
-    return { ok:false, error: "no webhook" };
-  }
-
+/* ===== GOOGLE SHEETS SYNC (без дублей) ===== */
+async function syncToSheets(entries) {
   const unsynced = entries.filter(e => !e.synced);
-  if (unsynced.length === 0) {
-    alert("Нет новых записей для синка.");
-    return { ok: true, message: "nothing" };
+  if (!unsynced.length) {
+    alert("Нет новых записей");
+    return entries;
   }
+  const res = await fetch(SHEETS_WEBHOOK_URL, {
+    method: "POST",
+    body: JSON.stringify({ entries: unsynced })
+  });
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error || "sync error");
 
-  try {
-    // IMPORTANT: без заголовков, чтобы избежать preflight (CORS)
-    const res = await fetch(SHEETS_WEBHOOK_URL, {
-      method: "POST",
-      body: JSON.stringify({ entries: unsynced })
-    });
-
-    const json = await res.json();
-
-    if (json && json.ok) {
-      // помечаем локально как синкнутые
-      const updated = entries.map(e => e.synced ? e : ({ ...e, synced: true }));
-      writeJSON(STORAGE.JOURNAL, updated);
-      return { ok: true, synced: unsynced.length };
-    } else {
-      return { ok: false, error: json?.error || "unknown" };
-    }
-  } catch (err) {
-    return { ok:false, error: err.message || String(err) };
-  }
+  return entries.map(e => ({ ...e, synced: true }));
 }
 
-/* ===========================================================
-   BLOCK: APP (React)
-   =========================================================== */
+/* ===== APP ===== */
 function App() {
   const [page, setPage] = React.useState("journal");
-  const [entries, setEntries] = React.useState(readJSON(STORAGE.JOURNAL, []));
-  const [rcLog, setRcLog] = React.useState(readJSON(STORAGE.RC, []));
-  const [rcTips, setRcTips] = React.useState(readJSON(STORAGE.RC_TIPS, DEFAULT_RC_TIPS));
+  const [entries, setEntries] = React.useState(read(STORAGE.JOURNAL, []));
+  const [rcTips, setRcTips] = React.useState(read(STORAGE.RC_TIPS, DEFAULT_RC_TIPS));
 
-  // Helpers to reload from storage after external writes
-  function reloadEntries() {
-    const e = readJSON(STORAGE.JOURNAL, []);
-    setEntries(e);
-  }
-
-  /* =========================
-     BLOCK: SAVE ENTRY
-     - создаёт структуру и сохраняет
-     ========================= */
-  function saveJournalEntry() {
-    const sleepTime = document.getElementById("sleepTime").value;
-    const wakeTime = document.getElementById("wakeTime").value;
-    const technique = document.getElementById("technique").value;
-    const level = Number(document.getElementById("level").value || 0);
+  function saveEntry() {
     const note = document.getElementById("note").value.trim();
-
-    if (!note) { alert("Заполните заметку о сне."); return; }
-
+    if (!note) return;
     const entry = {
       id: uid(),
       date: new Date().toLocaleDateString(),
-      sleepTime,
-      wakeTime,
-      technique,
-      level: Math.max(0, Math.min(5, isNaN(level) ? 0 : level)),
+      technique: document.getElementById("tech").value,
       note,
       synced: false
     };
-
     const updated = [...entries, entry];
     setEntries(updated);
-    writeJSON(STORAGE.JOURNAL, updated);
-
-    // очистка формы
-    ["sleepTime","wakeTime","technique","level","note"].forEach(id => {
-      const el = document.getElementById(id); if (el) el.value = "";
-    });
+    write(STORAGE.JOURNAL, updated);
+    document.getElementById("note").value = "";
   }
 
-  /* =========================
-     BLOCK: QUICK RC
-     - лог RC и сохранение
-     ========================= */
-  function logRC() {
-    const task = rcTips[Math.floor(Math.random() * rcTips.length)];
-    const rec = { id: uid(), time: new Date().toLocaleString(), task };
-    const updated = [...rcLog, rec];
-    setRcLog(updated);
-    writeJSON(STORAGE.RC, updated);
-    alert("RC: " + task);
-  }
-
-  /* =========================
-     BLOCK: SYNC BUTTON HANDLER
-     ========================= */
   async function handleSync() {
-    const res = await syncToSheets(entries);
-    if (res.ok) {
-      if (res.synced && res.synced > 0) {
-        alert("Синхронизировано: " + res.synced + " запись(ей)");
-        reloadEntries();
-      } else {
-        alert("Новых записей не было.");
-      }
-    } else {
-      alert("Ошибка синка: " + (res.error || "unknown"));
-    }
-  }
-
-  /* =========================
-     BLOCK: UI RENDER
-     ========================= */
-  // last 5 for journal preview
-  const lastFive = [...entries].slice(-5);
-
-  const totalLucid = entries.filter(e => e.level > 0).length;
-  const strongLucid = entries.filter(e => e.level >= 3).length;
-  const streak = computeStreak(entries);
-
-  return (
-    <div>
-      <h1>Lucidity</h1>
-
-      {/* BLOCK: NAV */}
-      <nav>
-        <button onClick={() => setPage("journal")}>Journal</button>
-        <button onClick={() => setPage("tracker")}>Tracker</button>
-        <button onClick={() => setPage("quickrc")}>Quick RC</button>
-        <button onClick={handleSync} className="primary">Sync</button>
-        <span style={{marginLeft:10}} className="small muted">v{APP_VERSION}</span>
-      </nav>
-
-      <div className="grid">
-        <div>
-
-          {/* ===== BLOCK: JOURNAL UI ===== */}
-          {page === "journal" && (
-            <div className="card">
-              <h2>Journal</h2>
-
-              {/* Sleep / Wake selects */}
-              <label className="small muted">Лёг спать</label>
-              <select id="sleepTime" defaultValue="">
-                <option value="">— выбрать —</option>
-                {timesOptions(15).map(t => <option key={"s"+t} value={t}>{t}</option>)}
-              </select>
-
-              <label className="small muted">Проснулся</label>
-              <select id="wakeTime" defaultValue="">
-                <option value="">— выбрать —</option>
-                {timesOptions(15).map(t => <option key={"w"+t} value={t}>{t}</option>)}
-              </select>
-
-              <label className="small muted">Техника</label>
-              <select id="technique" defaultValue="">
-                <option value="">— выбрать —</option>
-                {TECHNIQUES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-              </select>
-              <div className="small muted" style={{marginTop:6}}>
-                <strong>Подсказка:</strong> выберите технику. Нажмите <em>Tracker → Help</em> для расшифровки всех техник.
-              </div>
-
-              <label className="small muted" style={{marginTop:8}}>Осознанность (0–5)</label>
-              <input id="level" type="range" min="0" max="5" defaultValue="0" onChange={(e)=> {
-                const v = document.getElementById("level").value;
-                const lab = document.getElementById("levelLabel");
-                if (lab) lab.textContent = " " + v;
-              }} />
-              <div id="levelLabel" className="small muted"> 0</div>
-
-              <label className="small muted" style={{marginTop:8}}>Заметка</label>
-              <textarea id="note" placeholder="Сон / ощущения / выводы"></textarea>
-
-              <div style={{marginTop:10}}>
-                <button onClick={saveJournalEntry}>Save</button>
-              </div>
-
-              <div style={{marginTop:12}}>
-                <h3 className="small muted">Последние записи</h3>
-                <div>
-                  {lastFive.length === 0 && <div className="small muted">Нет записей</div>}
-                  <ul>
-                    {lastFive.map((e,i) => (
-                      <li key={e.id}>
-                        <span className="entry-meta">{e.date} · <span className="level">L{e.level}</span> · {e.technique || '—'}</span>
-                        <span>{e.note}</span>
-                        <span style={{marginLeft:8}} className={e.synced ? "synced small" : "small muted"}>
-                          {e.synced ? "synced ✅" : "not synced"}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ===== BLOCK: QUICK RC UI ===== */}
-          {page === "quickrc" && (
-            <div className="card">
-              <h2>Quick RC</h2>
-              <div style={{marginBottom:8}}>
-                <button onClick={logRC}>Do RC</button>
-              </div>
-
-              <div style={{marginTop:8}}>
-                <h3 className="small muted">Подсказки RC</h3>
-                <div className="rc-list">
-                  {rcTips.map((t, idx) => <div key={idx} style={{padding:6,borderBottom:"1px solid #0b0b0b"}}>{t}</div>)}
-                  {rcTips.length===0 && <div className="small muted">Подсказки не заданы</div>}
-                </div>
-              </div>
-
-              <div style={{marginTop:10}}>
-                <h3 className="small muted">История RC</h3>
-                <div style={{maxHeight:160,overflow:"auto"}}>
-                  {rcLog.length === 0 && <div className="small muted">Нет записей RC</div>}
-                  <ul>
-                    {rcLog.slice().reverse().map(r => (
-                      <li key={r.id} className="small muted">{r.time} — {r.task}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-
-            </div>
-          )}
-
-        </div>
-
-        <div>
-          {/* ===== BLOCK: TRACKER / HELP PANEL ===== */}
-          <div className="card">
-            <h2>Tracker</h2>
-            <div className="small muted">Всего записей: <strong>{entries.length}</strong></div>
-            <div className="small muted">Люцидных (level &gt; 0): <strong>{totalLucid}</strong></div>
-            <div className="small muted">Сильных (level ≥ 3): <strong>{strongLucid}</strong></div>
-            <div className="small muted">Текущая серия дней: <strong>{streak}</strong></div>
-
-            <div style={{marginTop:12}}>
-              <h3 className="small muted">Полный журнал</h3>
-              <div style={{maxHeight:260,overflow:"auto"}}>
-                {entries.length === 0 && <div className="small muted">Нет записей</div>}
-                {entries.slice().reverse().map(e => (
-                  <div key={e.id} className="entry-row">
-                    <div className="entry-meta">{e.date} · {e.sleepTime || '—'}→{e.wakeTime || '—'}</div>
-                    <div className="entry-note">{e.note}</div>
-                    <div style={{minWidth:80,textAlign:"right"}}>
-                      <div className="small muted">{e.technique || '—'}</div>
-                      <div><span className="level">L{e.level}</span></div>
-                      <div style={{marginTop:6}}>
-                        {e.synced ? <span className="status-badge synced">Synced</span> : <span className="status-badge">Local</span>}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="settings-block">
-              <h3 className="small muted">Help: техники</h3>
-              <div className="small muted">
-                {TECHNIQUES.map(t => (
-                  <div key={t.id} style={{marginBottom:6}}>
-                    <strong>{t.label}</strong> — {t.desc}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </div>
-
-          {/* ===== BLOCK: SETTINGS (edit RC tips) ===== */}
-          <div className="card" style={{marginTop:12}}>
-            <h3>Settings</h3>
-
-            <div className="small muted">Редактируем подсказки Quick RC (каждая с новой строки)</div>
-            <div style={{marginTop:8}}>
-              <textarea id="rcTipsArea" placeholder="Одна подсказка в строке" defaultValue={rcTips.join("\n")}></textarea>
-              <div style={{marginTop:8}}>
-                <button onClick={()=>{
-                  const val = document.getElementById("rcTipsArea").value;
-                  const arr = val.split("\n").map(s=>s.trim()).filter(Boolean);
-                  setRcTips(arr);
-                  writeJSON(STORAGE.RC_TIPS, arr);
-                  alert("Сохранено");
-                }}>Save tips</button>
-              </div>
-            </div>
-
-            <div style={{marginTop:12}}>
-              <div className="small muted">Webhook (для Sheets) — подправляется в коде (BLOCK: APP CONFIG)</div>
-            </div>
-
-          </div>
-
-        </div>
-      </div>
-
-      <div className="footer">Подсказки, RC, синхронизация. Если хочешь убрать ползунок уровня — скажи, уберу. Для иконки приложения можно заменить SVG в BLOCK: FAVICON.</div>
-    </div>
-  );
-}
-
-/* ===========================================================
-   BLOCK: RENDER
-   =========================================================== */
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-
-</script>
-</body>
-</html>
+    try {
+      const updated = await syncToSheets(entries);
+      setEntries(updated);
+      writ
