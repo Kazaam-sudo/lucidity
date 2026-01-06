@@ -124,10 +124,9 @@ async function syncToSheets() {
 
   try {
     const res = await fetch(SHEETS_WEBHOOK_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ entries })
-    });
+  method: "POST",
+  body: JSON.stringify({ entries }) // ВАЖНО: без headers
+});
 
     const result = await res.json();
 
