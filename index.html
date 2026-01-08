@@ -212,63 +212,32 @@ function Journal({ entries, setEntries }) {
   );
 }
 
-/* ============================================================
-   📅 TRACKER = CALENDAR
-   ============================================================ */
-
+/* BLOCK: TRACKER - load & auto-refresh */
 function Tracker() {
-  const [data, setData] = React.useState([]);
-  const [error, setError] = React.useState("");
+  const [calendar, setCalendar] = React.useState([]);
+  const [err, setErr] = React.useState(null);
 
   React.useEffect(() => {
-    loadCalendar()
-      .then(setData)
-      .catch(err => setError(err.message));
+    let mounted = true;
+
+    async function fetchCal() {
+      try {
+        const data = await loadCalendar();
+        if (mounted) setCalendar(data);
+      } catch (e) {
+        if (mounted) setErr(e.message);
+      }
+    }
+
+    fetchCal();
+
+    // авто-обновление каждые 5 минут (опционально)
+    const interval = setInterval(fetchCal, 5 * 60 * 1000);
+    return () => { mounted = false; clearInterval(interval); };
   }, []);
 
-  const byDate = {};
-  data.forEach(d => byDate[d.date] = d);
-
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  return (
-    <>
-      <h2>Календарь</h2>
-
-      {error && <p className="muted">{error}</p>}
-
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(7, 1fr)",
-        gap: "6px"
-      }}>
-        {[...Array(daysInMonth)].map((_, i) => {
-          const day = i + 1;
-          const date = `${year}-${String(month + 1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-          const entry = byDate[date];
-
-          return (
-            <div
-              key={day}
-              style={{
-                padding: "8px",
-                border: "1px solid #333",
-                background: entry ? "#1e2a1e" : "#111",
-                fontSize: "12px"
-              }}
-            >
-              <strong>{day}</strong><br/>
-              {entry && <span>{entry.technique}</span>}
-            </div>
-          );
-        })}
-      </div>
-    </>
-  );
+  // далее — отрисовка календаря по calendar[]
+  // calendar — массив объектов, избавься от дублирующихся дат (можно map по date)
 }
 
 /* ============================================================
@@ -447,6 +416,50 @@ function App() {
    ============================================================ */
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+
+  /* BLOCK: FRONTEND - syncJournal (writeJournal action) */
+async function syncJournal(entries) {
+  const unsynced = entries.filter(e => !e.synced);
+  if (!unsynced.length) return entries;
+
+  const res = await fetch(SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "writeJournal",
+      entries: unsynced
+    })
+  });
+
+  const text = await res.text();
+  if (text.startsWith("<")) throw new Error("Apps Script returned HTML (check deploy /exec)");
+
+  const json = JSON.parse(text);
+  if (!json.ok) throw new Error(json.error || "sync failed");
+
+  // помечаем все локальные как synced
+  const updated = entries.map(e => ({ ...e, synced: true }));
+  saveJournal(updated); // твоя функция сохранения в localStorage
+  return updated;
+}
+
+  /* BLOCK: FRONTEND - loadCalendar (readCalendar action) */
+async function loadCalendar() {
+  const res = await fetch(SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "readCalendar" })
+  });
+
+  const text = await res.text();
+  if (text.startsWith("<")) throw new Error("Apps Script returned HTML (check deploy /exec)");
+
+  const json = JSON.parse(text);
+  if (!json.ok) throw new Error(json.error || "readCalendar failed");
+
+  return json.data; // массив {date,type,title,description,intensity}
+}
+
 
 </script>
 </body>
